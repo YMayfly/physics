@@ -1,0 +1,59 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+class Ising1D:
+    def __init__(self, N=100, J=1.0, h=0.0):
+        self.N = N          # 格点数
+        self.J = J          # 交换能
+        self.h = h          # 外磁场
+        self.spins = np.random.choice([-1, 1], size=N)  # 初始化自旋
+        
+    def energy_diff(self, i):
+        """计算翻转第i个自旋的能量变化"""
+        left = self.spins[i-1] if i > 0 else self.spins[-1]  # 周期性边界
+        right = self.spins[i+1] if i < self.N-1 else self.spins[0]
+        delta_E = 2 * self.J * self.spins[i] * (left + right) + 2 * self.h * self.spins[i]
+        return delta_E
+    
+    def metropolis_step(self, T):
+        """Metropolis算法单步更新"""
+        for _ in range(self.N):
+            i = np.random.randint(self.N)
+            dE = self.energy_diff(i)
+            if dE < 0 or np.random.rand() < np.exp(-dE/T):
+                self.spins[i] *= -1
+                
+    def simulate(self, T_range, eq_steps=1000, mc_steps=1000):
+        """在不同温度下模拟"""
+        magnetization = []
+        for T in T_range:
+            # 平衡系统
+            for _ in range(eq_steps):
+                self.metropolis_step(T)
+            # 数据采集
+            mag = 0.0
+            for _ in range(mc_steps):
+                self.metropolis_step(T)
+                mag += np.abs(np.mean(self.spins))
+            magnetization.append(mag / mc_steps)
+        return magnetization
+
+# 参数设置
+N = 100        # 系统尺寸
+T_min = 0.1    # 最低温度
+T_max = 4.0    # 最高温度
+n_T = 50       # 温度点数
+
+# 运行模拟
+model = Ising1D(N=N)
+T_values = np.linspace(T_min, T_max, n_T)
+mag = model.simulate(T_values)
+
+# 可视化
+plt.figure(figsize=(10,6))
+plt.plot(T_values, mag, 'o-', color='royalblue')
+plt.xlabel("Temperature (T)", fontsize=14)
+plt.ylabel("Magnetization (|m|)", fontsize=14)
+plt.title("1D Ising Model Phase Transition", fontsize=16)
+plt.grid(alpha=0.3)
+plt.show()
